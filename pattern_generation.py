@@ -1,5 +1,6 @@
 
 import math
+import util as u
 
 def calc_line_params(p1,p2):
     a = (p1["y"] - p2["y"])/(p1["x"] - p2["x"])
@@ -14,64 +15,6 @@ def calc_x(line_params, y):
     x = (y - line_params["b"])/line_params["a"]
     return x
 
-
-def fit_points_to_the_limit(points_w_md, limit):
-
-    point_count = len(points_w_md)
-
-    for i in range(point_count):
-
-        pir = points_w_md[i]["point"]
-        pirvc = points_w_md[i]["vc"]
-
-        prev_pir_idx = i-1 if i != 0 else point_count-1
-        next_pir_idx = i+1 if i != point_count-1 else 0
-
-        prev_pir = points_w_md[prev_pir_idx]["point"]
-        prev_pirvc = points_w_md[prev_pir_idx]["vc"]
-        next_pir = points_w_md[next_pir_idx]["point"]
-        next_pirvc = points_w_md[next_pir_idx]["vc"]
-
-        pcalc = None
-        if pirvc != None:
-            if prev_pirvc != None and next_pirvc != None:
-                continue
-
-            pcalc = {"x": pir["x"], "y": pir["y"]}
-            line_point = {"x": 0, "y": 0}
-            if prev_pirvc == None:
-                line_point = prev_pir
-
-            if next_pirvc == None:
-                line_point = next_pir
-
-            lp = calc_line_params(pcalc, line_point)
-            x_target = (limit["x.min"] if  pcalc["x"] < limit["x.min"] else None)
-            if x_target != None:
-                pcalc["x"] = x_target
-                pcalc["y"] = calc_y(lp, pcalc["x"])
-
-            x_target = (limit["x.max"] if  pcalc["x"] > limit["x.max"] else None)
-            if x_target != None:
-                pcalc["x"] = x_target
-                pcalc["y"] = calc_y(lp, pcalc["x"])
-
-            y_target = (limit["y.min"] if  pcalc["y"] < limit["y.min"] else None)
-            if y_target != None:
-                pcalc["y"] = y_target
-                pcalc["x"] = calc_x(lp, pcalc["y"])
-
-            y_target = (limit["y.max"] if  pcalc["y"] > limit["y.max"] else None)
-            if y_target != None:
-                pcalc["y"] = y_target
-                pcalc["x"] = calc_x(lp, pcalc["y"])
-
-        else:
-            pcalc = pir
-
-        points_w_md[i]["point"] = pir
-
-    return points_w_md
 
 def sort_points(points_w_md):
     point_count = len(points_w_md)
@@ -269,20 +212,6 @@ def generateHexagonPoints(size, position, phase, limit):
     else:
         return points_w_md
 
-
-def generatePathDescription(points_w_md):
-    d = []
-    for point_w_md in points_w_md:
-        point = point_w_md["point"]
-
-        if(len(d) == 0):
-            d.append(f'M {point["x"]} {point["y"]} ')
-        else:
-            d.append(f'L {point["x"]} {point["y"]} ')
-
-    d.append("Z")
-    return "".join(d)
-
 def GenerateKerfEstimationPattern(max, min, limit, smpl_spcing, rows):
     xspace = limit["x.max"] - limit["x.min"]
     yspace = limit["y.max"] - limit["y.min"]
@@ -316,13 +245,6 @@ def GenerateKerfEstimationPattern(max, min, limit, smpl_spcing, rows):
             paths.append(path_value)
 
     return "".join(paths)
-
-def path_svg(path_decription):
-    path_value = "<path\n"
-    path_value = path_value + "style=\"fill:none;stroke:#000000;stroke-width:0.033mm;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1\"\n"
-    path_value = path_value + "d=\"" + path_decription + "\" />\n"
-
-    return path_value
 
 def draw_paths(delta, pattern_limit, params):
 
@@ -373,14 +295,21 @@ def draw_paths(delta, pattern_limit, params):
             if hex_points == None:
                 continue
 
-            path_value = "<path\n"
-            path_value = path_value + "style=\"fill:none;stroke:#000000;stroke-width:0.033mm;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1\"\n"
-            path_value = path_value + "d=\"" + generatePathDescription(hex_points) + "\" />\n"
+            path = u.md_points_2_path(hex_points)
+            paths.append(path)
 
-            paths.append(path_value)
 
     return "".join(paths)
 
+def hole_path_gen(hole_size, x_center, y_center):
+
+    
+    cpoints = generaCirclePoints(20, 0, hole_size, x_center, y_center)
+    cpoints_w_md = []
+    for cpoint in cpoints:
+        cpoints_w_md.append({"point": cpoint})
+    svg_hole_path = u.md_points_2_path(cpoints_w_md)
+    return svg_hole_path;
 
 def generate_hexagonal_patern_paths(parameters):
     x_limit = parameters["x_limit"]
@@ -468,42 +397,26 @@ def generate_hexagonal_patern_paths(parameters):
         x_center = xa + parameters["hole_offest"]
         y_center = ya + parameters["hole_offest"]
         
-        cpoints = generaCirclePoints(20, 0, parameters["hole_size"], x_center, y_center)
-        cpoints_w_md = []
-        for cpoint in cpoints:
-            cpoints_w_md.append({"point": cpoint})
-        svg_path = path_svg(generatePathDescription(cpoints_w_md))
-        all_paths.append(svg_path)
+        svg_hole_path = hole_path_gen(parameters["hole_size"], x_center, y_center)
+        all_paths.append(svg_hole_path)
 
         x_center = xb - parameters["hole_offest"]
         y_center = ya + parameters["hole_offest"]
         
-        cpoints = generaCirclePoints(20, 0, parameters["hole_size"], x_center, y_center)
-        cpoints_w_md = []
-        for cpoint in cpoints:
-            cpoints_w_md.append({"point": cpoint})
-        svg_path = path_svg(generatePathDescription(cpoints_w_md))
-        all_paths.append(svg_path)
+        svg_hole_path = hole_path_gen(parameters["hole_size"], x_center, y_center)
+        all_paths.append(svg_hole_path)
 
         x_center = xb - parameters["hole_offest"]
         y_center = yb - parameters["hole_offest"]
         
-        cpoints = generaCirclePoints(20, 0, parameters["hole_size"], x_center, y_center)
-        cpoints_w_md = []
-        for cpoint in cpoints:
-            cpoints_w_md.append({"point": cpoint})
-        svg_path = path_svg(generatePathDescription(cpoints_w_md))
-        all_paths.append(svg_path)
+        svg_hole_path = hole_path_gen(parameters["hole_size"], x_center, y_center)
+        all_paths.append(svg_hole_path)
 
         x_center = xa + parameters["hole_offest"]
         y_center = yb - parameters["hole_offest"]
         
-        cpoints = generaCirclePoints(20, 0, parameters["hole_size"], x_center, y_center)
-        cpoints_w_md = []
-        for cpoint in cpoints:
-            cpoints_w_md.append({"point": cpoint})
-        svg_path = path_svg(generatePathDescription(cpoints_w_md))
-        all_paths.append(svg_path)
+        svg_hole_path = hole_path_gen(parameters["hole_size"], x_center, y_center)
+        all_paths.append(svg_hole_path)
 
 
     # layer frame
@@ -517,7 +430,7 @@ def generate_hexagonal_patern_paths(parameters):
         cpoints_w_md = []
         for cpoint in cpoints:
             cpoints_w_md.append({"point": cpoint})
-        svg_path = path_svg(generatePathDescription(cpoints_w_md))
+        svg_path = u.md_points_2_path(cpoints_w_md)
         all_paths.append(svg_path)
 
     # kerf_paths = GenerateKerfEstimationPattern(3.0, 0.06, kerf_limit, 5.0, 4)

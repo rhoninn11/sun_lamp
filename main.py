@@ -56,6 +56,3 @@ result_svg = "".join(svg);
 with open('result.svg', 'w') as file:
     file.write(result_svg)
 
-# fractal_len = util.calculate_path_length(fractal_points)
-print(f'Fractal lines total length {fractal_len}')
-
