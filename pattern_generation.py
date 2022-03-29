@@ -246,6 +246,18 @@ def GenerateKerfEstimationPattern(max, min, limit, smpl_spcing, rows):
 
     return "".join(paths)
 
+def path_len_calc(points):
+    
+    point_num = len(points);
+    distance = 0;
+    for i in range(point_num):
+        p_a = points[i]["point"]
+        p_b = points[(i+1)%point_num]["point"]
+        distance = distance + u.calc_point_dist(p_a, p_b)
+        
+    return distance;
+        
+        
 def draw_paths(delta, pattern_limit, params):
 
     # configurable
@@ -278,6 +290,7 @@ def draw_paths(delta, pattern_limit, params):
     hexagon_center = {"x": x_center, "y": y_center}
 
     paths = []
+    path_len = 0
 
     for y in range(y_size):
         y_index = y + y_correction
@@ -294,11 +307,13 @@ def draw_paths(delta, pattern_limit, params):
             hex_points = generateHexagonPoints(hexagon_size, hex_position, phase, pattern_limit )
             if hex_points == None:
                 continue
-
+            
+            path_len = path_len + path_len_calc(hex_points)
             path = u.md_points_2_path(hex_points)
             paths.append(path)
 
 
+    print(path_len)
     return "".join(paths)
 
 def hole_path_gen(hole_size, x_center, y_center):
@@ -369,7 +384,6 @@ def generate_hexagonal_patern_paths(parameters):
 
     x_section_width = x_section_space/x_section_count
     y_section_height = y_section_space/y_section_count
-    print(y_section_space, y_limit, y_padding, y_beatwean_section_space, y_section_height)
 
     xa = parameters["x_start"]
     xb = xa + x_limit
@@ -455,7 +469,6 @@ def generate_hexagonal_patern_paths(parameters):
                 "y.min": y_min, "y.max": y_max - y_section*shrinkage_factor
             } 
 
-            print(section_limit, y_section_space)  
             hexagon_size = hsize[y_section][x_section]
             hexagon_spacing = hspacing[y_section][x_section]
             params = [hexagon_size, hexagon_spacing]
